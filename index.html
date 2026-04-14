@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Pathfinding Visualizer | A* | Dijkstra | BFS | DFS | Maze Generation</title>
+    <style>
+        * {
+            user-select: none;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
+            font-family: 'Segoe UI', 'Fira Code', 'Inter', system-ui, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 24px;
+        }
+
+        .visualizer-container {
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(2px);
+            border-radius: 2.5rem;
+            padding: 1.5rem;
+            box-shadow: 0 25px 45px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1);
+            border: 1px solid rgba(71, 85, 105, 0.5);
+        }
+
+        .canvas-panel {
+            background: #0f172a;
+            border-radius: 1.5rem;
+            padding: 1rem;
+            box-shadow: inset 0 2px 5px #00000030, 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border-radius: 1rem;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+            cursor: crosshair;
+            background-color: #0b1120;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 24px;
+            margin-bottom: 16px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        button, .algo-btn {
+            background: #1e293b;
+            border: none;
+            padding: 8px 18px;
+            font-weight: bold;
+            font-family: inherit;
+            font-size: 0.85rem;
+            border-radius: 60px;
+            color: #e2e8f0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            backdrop-filter: blur(4px);
+            letter-spacing: 0.3px;
+        }
+
+        button:hover {
+            background: #2d3a4e;
+            transform: scale(0.97);
+            color: white;
+        }
+
+        .primary {
+            background: #3b82f6;
+            color: white;
+            box-shadow: 0 4px 12px #3b82f670;
+        }
+
+        .primary:hover {
+            background: #2563eb;
+        }
+
+        .danger {
+            background: #dc2626;
+        }
+        .danger:hover {
+            background: #b91c1c;
+        }
+
+        .toggle-group {
+            display: flex;
+            gap: 8px;
+            background: #0f172a;
+            padding: 5px 12px;
+            border-radius: 60px;
+            align-items: center;
+        }
+
+        .toggle-group label {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #94a3b8;
+        }
+
+        select, input {
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: #f1f5f9;
+            border-radius: 40px;
+            padding: 6px 12px;
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        .metrics {
+            display: flex;
+            gap: 24px;
+            justify-content: space-between;
+            background: #0f172abb;
+            border-radius: 60px;
+            padding: 8px 20px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+            font-size: 0.8rem;
+            font-family: 'Fira Code', monospace;
+            font-weight: bold;
+            backdrop-filter: blur(8px);
+        }
+
+        .metric-card {
+            background: #00000055;
+            border-radius: 32px;
+            padding: 5px 14px;
+            color: #cbd5e6;
+        }
+
+        .metric-card span:first-child {
+            color: #7e8aa2;
+        }
+
+        .metric-card span:last-child {
+            color: #facc15;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+
+        h3 {
+            margin: 0 0 8px 0;
+            font-size: 1rem;
+            text-align: center;
+            color: #cbd5f0;
+            letter-spacing: 1px;
+        }
+
+        hr {
+            border-color: #334155;
+            margin: 8px 0;
+        }
+        .status {
+            text-align: center;
+            font-family: monospace;
+            font-weight: bold;
+            color: #facc15;
+            background: #00000066;
+            border-radius: 32px;
+            padding: 4px 12px;
+            font-size: 0.75rem;
+        }
+        @media (max-width: 760px) {
+            button, .algo-btn { padding: 5px 12px; font-size: 0.7rem;}
+            .metric-card { font-size: 0.7rem; }
+        }
+    </style>
+</head>
+<body>
+<div>
+    <div class="visualizer-container">
+        <div class="canvas-panel">
+            <canvas id="gridCanvas" width="900" height="550"></canvas>
+        </div>
+
+        <div class="controls">
+            <div class="toggle-group">
+                <span>🎯 Algo:</span>
+                <button id="btnAstar" class="algo-btn primary">A*</button>
+                <button id="btnDijkstra" class="algo-btn">Dijkstra</button>
+                <button id="btnBFS" class="algo-btn">BFS</button>
+                <button id="btnDFS" class="algo-btn">DFS</button>
+            </div>
+            <button id="startPathBtn">▶ RUN</button>
+            <button id="clearWallsBtn">🗑️ Clear Walls</button>
+            <button id="resetGridBtn">🔄 Reset Grid</button>
+            <button id="genMazeRecBtn">🌲 Maze (Recursive BT)</button>
+            <button id="genMazePrimBtn">🌀 Maze (Prim's)</button>
+            <div class="toggle-group">
+                <label>⬡ Diagonal:</label>
+                <input type="checkbox" id="diagToggle">
+                <label>⚡ Weighted:</label>
+                <input type="checkbox" id="weightToggle" checked>
+            </div>
+        </div>
+
+        <div class="metrics">
+            <div class="metric-card"><span>⏱️ Time (ms)</span><span id="timeMetric">0.00</span></div>
+            <div class="metric-card"><span>📦 Nodes Visited</span><span id="visitedMetric">0</span></div>
+            <div class="metric-card"><span>🛣️ Path Length</span><span id="pathLenMetric">0</span></div>
+            <div class="metric-card"><span>⚙️ Status</span><span id="statusMsg">Idle</span></div>
+        </div>
+        <div class="status">💡 Left-click: draw walls | Right-click: erase | Drag to draw | Weighted nodes (cost 5) appear as 🌟</div>
+    </div>
+</div>
+
+<script>
+    (function(){
+        // ---------- CONFIGURATION ----------
+        const canvas = document.getElementById('gridCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let rows = 25;
+        let cols = 45;
+        let cellW = canvas.width / cols;
+        let cellH = canvas.height / rows;
+
+        // Grid state
+        let grid = [];
+        let start = {x: 5, y: 12};
+        let end = {x: cols-6, y: 12};
+
+        let currentAlgorithm = "astar";   // astar, dijkstra, bfs, dfs
+        let diagonalMove = false;
+        let weightedNodesEnabled = true;   // weighted cost = 5, normal = 1
+
+        let animationId = null;
+        let isAnimating = false;
+        let pathNodes = [];      // store final path for drawing
+        let visitedNodesInOrder = [];
+
+        // drawing state
+        let isDrawing = false;
+        let drawMode = "wall";   // wall or erase
+
+        // ----- Helper Functions -----
+        function initGrid(){
+            let newGrid = [];
+            for(let r=0; r<rows; r++){
+                newGrid[r] = [];
+                for(let c=0; c<cols; c++){
+                    newGrid[r][c] = {
+                        row: r, col: c,
+                        isWall: false,
+                        isWeighted: false,   // special weighted node (cost 5)
+                        visited: false,
+                        distance: Infinity,
+                        fScore: Infinity,
+                        previous: null,
+                        // for BFS/DFS visited handled separately
+                    };
+                }
+            }
+            // set start and end (never walls)
+            if(newGrid[start.y] && newGrid[start.y][start.x]) newGrid[start.y][start.x].isWall = false;
+            if(newGrid[end.y] && newGrid[end.y][end.x]) newGrid[end.y][end.x].isWall = false;
+            // Add some random weighted nodes for demonstration (10% random weighted)
+            if(weightedNodesEnabled){
+                for(let r=0; r<rows; r++){
+                    for(let c=0; c<cols; c++){
+                        if((r===start.y && c===start.x) || (r===end.y && c===end.x)) continue;
+                        if(Math.random() < 0.08){
+                            newGrid[r][c].isWeighted = true;
+                        }
+                    }
+                }
+            }
+            return newGrid;
+        }
+
+        function resetGridKeepWalls(keepWalls=false){
+            let newGrid = initGrid();
+            if(keepWalls){
+                // copy existing walls from current grid
+                for(let r=0; r<rows; r++){
+                    for(let c=0; c<cols; c++){
+                        if(grid[r][c] && grid[r][c].isWall){
+                            newGrid[r][c].isWall = true;
+                            newGrid[r][c].isWeighted = false;
+                        }else if(grid[r][c] && grid[r][c].isWeighted && weightedNodesEnabled){
+                            newGrid[r][c].isWeighted = true;
+                        }
+                    }
+                }
+            }
+            // ensure start/end not walls
+            newGrid[start.y][start.x].isWall = false;
+            newGrid[end.y][end.x].isWall = false;
+            newGrid[start.y][start.x].isWeighted = false;
+            newGrid[end.y][end.x].isWeighted = false;
+            return newGrid;
+        }
+
+        function resetFull(){
+            stopAnimation();
+            grid = initGrid();
+            drawGrid();
+            updateMetricsClear();
+            document.getElementById('statusMsg').innerText = "Idle";
+        }
+
+        function clearWallsOnly(){
+            stopAnimation();
+            for(let r=0; r<rows; r++){
+                for(let c=0; c<cols; c++){
+                    if(!(r===start.y && c===start.x) && !(r===end.y && c===end.x)){
+                        grid[r][c].isWall = false;
+                        if(weightedNodesEnabled && grid[r][c].isWeighted === true){} // keep weighted but walls removed
+                        else if(!weightedNodesEnabled) grid[r][c].isWeighted = false;
+                    }
+                }
+            }
+            drawGrid();
+            updateMetricsClear();
+        }
+
+        function updateMetricsClear(){
+            document.getElementById('timeMetric').innerText = "0.00";
+            document.getElementById('visitedMetric').innerText = "0";
+            document.getElementById('pathLenMetric').innerText = "0";
+        }
+
+        function stopAnimation(){
+            if(animationId){
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            isAnimating = false;
+        }
+
+        // ----- Algorithm implementations (Core) -----
+        function getNeighbors(node){
+            const dirs = diagonalMove ? 
+                [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]] :
+                [[-1,0],[1,0],[0,-1],[0,1]];
+            let neighbors = [];
+            for(let [dr,dc] of dirs){
+                let nr = node.row + dr, nc = node.col + dc;
+                if(nr>=0 && nr<rows && nc>=0 && nc<cols && !grid[nr][nc].isWall){
+                    neighbors.push(grid[nr][nc]);
+                }
+            }
+            return neighbors;
+        }
+
+        function getNodeCost(node){
+            if(!weightedNodesEnabled) return 1;
+            return node.isWeighted ? 5 : 1;
+        }
+
+        async function runAlgorithm(){
+            if(isAnimating) stopAnimation();
+            updateMetricsClear();
+            // reset visited flags
+            for(let r=0; r<rows; r++){
+                for(let c=0; c<cols; c++){
+                    grid[r][c].visited = false;
+                    grid[r][c].distance = Infinity;
+                    grid[r][c].fScore = Infinity;
+                    grid[r][c].previous = null;
+                }
+            }
+            const startNode = grid[start.y][start.x];
+            const endNode = grid[end.y][end.x];
+            startNode.distance = 0;
+            if(currentAlgorithm === "astar") startNode.fScore = heuristic(startNode, endNode);
+            
+            let visitedOrder = [];
+            let found = false;
+            let executionStart = performance.now();
+            
+            // Data structures
+            let openSet = [];   // for astar/dijkstra use priority queue simulation via array + sort
+            if(currentAlgorithm === "bfs"){
+                let queue = [startNode];
+                startNode.visited = true;
+                while(queue.length && !found){
+                    let current = queue.shift();
+                    visitedOrder.push(current);
+                    if(current === endNode){ found=true; break; }
+                    let neighbors = getNeighbors(current);
+                    for(let nb of neighbors){
+                        if(!nb.visited){
+                            nb.visited = true;
+                            nb.previous = current;
+                            queue.push(nb);
+                        }
+                    }
+                }
+            } 
+            else if(currentAlgorithm === "dfs"){
+                let stack = [startNode];
+                startNode.visited = true;
+                while(stack.length && !found){
+                    let current = stack.pop();
+                    visitedOrder.push(current);
+                    if(current === endNode){ found=true; break; }
+                    let neighbors = getNeighbors(current);
+                    for(let nb of neighbors){
+                        if(!nb.visited){
+                            nb.visited = true;
+                            nb.previous = current;
+                            stack.push(nb);
+                        }
+                    }
+                }
+            }
+            else {
+                // Dijkstra or A*
+                openSet.push(startNode);
+                while(openSet.length > 0 && !found){
+                    openSet.sort((a,b) => (currentAlgorithm === "astar") ? a.fScore - b.fScore : a.distance - b.distance);
+                    let current = openSet.shift();
+                    if(current.visited) continue;
+                    current.visited = true;
+                    visitedOrder.push(current);
+                    if(current === endNode){ found=true; break; }
+                    let neighbors = getNeighbors(current);
+                    for(let nb of neighbors){
+                        let tentative = current.distance + getNodeCost(nb);
+                        if(tentative < nb.distance){
+                            nb.previous = current;
+                            nb.distance = tentative;
+                            if(currentAlgorithm === "astar"){
+                                nb.fScore = nb.distance + heuristic(nb, endNode);
+                            }
+                            if(!openSet.includes(nb)) openSet.push(nb);
+                        }
+                    }
+                }
+            }
+            
+            let execTime = performance.now() - executionStart;
+            // reconstruct path
+            let path = [];
+            let temp = endNode;
+            while(temp){
+                path.unshift(temp);
+                if(temp === startNode) break;
+                temp = temp.previous;
+            }
+            if(path[0] !== startNode) path = [];
+            
+            // show metrics
+            document.getElementById('timeMetric').innerText = execTime.toFixed(2);
+            document.getElementById('visitedMetric').innerText = visitedOrder.length;
+            document.getElementById('pathLenMetric').innerText = (path.length-1) >=0 ? path.length-1 : 0;
+            document.getElementById('statusMsg').innerText = found ? "✅ Path Found" : "❌ No Path";
+            
+            // Animate
+            await animateSearch(visitedOrder, path);
+        }
+
+        function heuristic(a,b){
+            // diagonal distance heuristic if diagonal allowed else manhattan
+            let dx = Math.abs(a.col - b.col);
+            let dy = Math.abs(a.row - b.row);
+            if(diagonalMove) return Math.max(dx, dy) + (Math.SQRT2 -1) * Math.min(dx,dy);
+            else return dx+dy;
+        }
+
+        async function animateSearch(visitedNodes, finalPath){
+            if(isAnimating) stopAnimation();
+            isAnimating = true;
+            // step through visited nodes
+            for(let i=0; i<visitedNodes.length; i++){
+                if(!isAnimating) return;
+                let node = visitedNodes[i];
+                if(node === grid[start.y][start.x] || node === grid[end.y][end.x]) continue;
+                drawGridWithHighlight(node, null, null);
+                await sleep(8);
+            }
+            // draw final path
+            for(let i=0; i<finalPath.length; i++){
+                if(!isAnimating) break;
+                let p = finalPath[i];
+                if(p !== grid[start.y][start.x] && p !== grid[end.y][end.x]){
+                    drawGridWithHighlight(null, p, null);
+                    await sleep(20);
+                } else if(p === grid[end.y][end.x]) drawGridWithHighlight(null, null, "end");
+            }
+            drawGrid();
+            isAnimating = false;
+            animationId = null;
+        }
+
+        function sleep(ms){
+            return new Promise(resolve => {
+                animationId = setTimeout(()=>resolve(), ms);
+            });
+        }
+
+        // Drawing with highlights
+        function drawGridWithHighlight(visitingNode=null, pathNode=null, special=null){
+            drawGrid(visitingNode, pathNode);
+        }
+
+        function drawGrid(visiting=null, pathHighlight=null){
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            for(let r=0; r<rows; r++){
+                for(let c=0; c<cols; c++){
+                    let node = grid[r][c];
+                    let x = c*cellW, y = r*cellH;
+                    let fill = "#0b1120";
+                    if(node.isWall) fill = "#1e293b";
+                    else if(node === grid[start.y][start.x]) fill = "#10b981";
+                    else if(node === grid[end.y][end.x]) fill = "#ef4444";
+                    else if(node.isWeighted && weightedNodesEnabled && !node.isWall) fill = "#b45309";
+                    else fill = "#111827";
+                    
+                    ctx.fillStyle = fill;
+                    ctx.fillRect(x, y, cellW-0.5, cellH-0.5);
+                    
+                    if(node === visiting && !node.isWall && node !== grid[start.y][start.x] && node !== grid[end.y][end.x]){
+                        ctx.fillStyle = "#facc15";
+                        ctx.fillRect(x+2, y+2, cellW-4, cellH-4);
+                    }
+                    if(node === pathHighlight && !node.isWall && node !== grid[start.y][start.x] && node !== grid[end.y][end.x]){
+                        ctx.fillStyle = "#a78bfa";
+                        ctx.fillRect(x+3, y+3, cellW-6, cellH-6);
+                    }
+                    if(node.isWeighted && weightedNodesEnabled && !node.isWall && node !== grid[start.y][start.x] && node !== grid[end.y][end.x] && node !== pathHighlight && node !== visiting){
+                        ctx.fillStyle = "#f59e0b";
+                        ctx.font = `${Math.min(cellW,cellH)*0.5}px monospace`;
+                        ctx.fillText("⚡", x+cellW*0.3, y+cellH*0.7);
+                    }
+                    // grid lines
+                    ctx.strokeStyle = "#1f2a44";
+                    ctx.strokeRect(x, y, cellW, cellH);
+                }
+            }
+            // extra start/end icons
+            ctx.font = `${Math.min(cellW,cellH)*0.6}px monospace`;
+            ctx.fillStyle = "white";
+            ctx.fillText("🏁", start.x*cellW+cellW*0.25, start.y*cellH+cellH*0.7);
+            ctx.fillStyle = "white";
+            ctx.fillText("🎯", end.x*cellW+cellW*0.25, end.y*cellH+cellH*0.7);
+        }
+
+        // Maze Generation: Recursive Backtracking & Prim's
+        function generateMazeRecursive(){
+            stopAnimation();
+            resetFull();
+            // carve walls: init all cells as walls
+            for(let r=0; r<rows; r++){
+                for(let c=0; c<cols; c++){
+                    if((r===start.y && c===start.x) || (r===end.y && c===end.x)) continue;
+                    grid[r][c].isWall = true;
+                    grid[r][c].isWeighted = false;
+                }
+            }
+            let stack = [];
+            let startCell = {x: Math.floor(cols/2), y: Math.floor(rows/2)};
+            grid[startCell.y][startCell.x].isWall = false;
+            stack.push(startCell);
+            while(stack.length){
+                let current = stack[stack.length-1];
+                let neighbors = getUnvisitedNeighborsForMaze(current);
+                if(neighbors.length){
+                    let rand = neighbors[Math.floor(Math.random()*neighbors.length)];
+                    // remove wall between current and rand
+                    let wallX = (current.x + rand.x)/2;
+                    let wallY = (current.y + rand.y)/2;
+                    if(Number.isInteger(wallX) && Number.isInteger(wallY)){
+                        if(grid[wallY][wallX]) grid[wallY][wallX].isWall = false;
+                    }
+                    grid[rand.y][rand.x].isWall = false;
+                    stack.push(rand);
+                } else {
+                    stack.pop();
+                }
+            }
+            // ensure start/end clear
+            grid[start.y][start.x].isWall = false;
+            grid[end.y][end.x].isWall = false;
+            drawGrid();
+        }
+
+        function getUnvisitedNeighborsForMaze(cell){
+            let dirs = [[-2,0],[2,0],[0,-2],[0,2]];
+            let res = [];
+            for(let [dx,dy] of dirs){
+                let nx = cell.x+dx, ny = cell.y+dy;
+                if(nx>0 && nx<cols && ny>0 && ny<rows && grid[ny][nx].isWall === true){
+                    res.push({x:nx, y:ny});
+                }
+            }
+            return res;
+        }
+
+        function generateMazePrim(){
+            stopAnimation();
+            resetFull();
+            for(let r=0; r<rows; r++){
+                for(let c=0; c<cols; c++){
+                    if((r===start.y && c===start.x) || (r===end.y && c===end.x)) continue;
+                    grid[r][c].isWall = true;
+                }
+            }
+            let walls = [];
+            let startX = Math.floor(cols/2), startY = Math.floor(rows/2);
+            grid[startY][startX].isWall = false;
+            addWallsToList(startX, startY, walls);
+            while(walls.length){
+                let rand = Math.floor(Math.random()*walls.length);
+                let wall = walls[rand];
+                let {x, y, nx, ny} = wall;
+                if(grid[ny][nx] && grid[ny][nx].isWall === true){
+                    grid[y][x].isWall = false;
+                    grid[ny][nx].isWall = false;
+                    addWallsToList(nx, ny, walls);
+                }
+                walls.splice(rand,1);
+            }
+            grid[start.y][start.x].isWall = false;
+            grid[end.y][end.x].isWall = false;
+            drawGrid();
+        }
+        function addWallsToList(x,y, walls){
+            let dirs = [[2,0],[-2,0],[0,2],[0,-2]];
+            for(let [dx,dy] of dirs){
+                let nx = x+dx, ny = y+dy;
+                if(nx>=0 && nx<cols && ny>=0 && ny<rows && grid[ny][nx].isWall===true){
+                    let midX = (x+nx)/2, midY = (y+ny)/2;
+                    if(Number.isInteger(midX) && Number.isInteger(midY)){
+                        walls.push({x:midX, y:midY, nx, ny});
+                    }
+                }
+            }
+        }
+
+        // Event Handlers: drawing walls / weighted nodes via click/drag
+        function handleCanvasMouse(e, isRight=false){
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width/rect.width;
+            const scaleY = canvas.height/rect.height;
+            let mouseX = (e.clientX - rect.left)*scaleX;
+            let mouseY = (e.clientY - rect.top)*scaleY;
+            let col = Math.floor(mouseX / cellW);
+            let row = Math.floor(mouseY / cellH);
+            if(col>=0 && col<cols && row>=0 && row<rows){
+                let node = grid[row][col];
+                if(node === grid[start.y][start.x] || node === grid[end.y][end.x]) return;
+                if(isRight){
+                    node.isWall = false;
+                } else {
+                    if(e.ctrlKey || e.shiftKey){
+                        if(weightedNodesEnabled) node.isWeighted = !node.isWeighted;
+                        node.isWall = false;
+                    } else {
+                        node.isWall = true;
+                        node.isWeighted = false;
+                    }
+                }
+                drawGrid();
+            }
+        }
+
+        function onMouseMove(e){
+            if(!isDrawing) return;
+            let right = (e.buttons === 2);
+            handleCanvasMouse(e, right);
+        }
+
+        function onMouseDown(e){
+            e.preventDefault();
+            isDrawing = true;
+            let isRight = (e.button === 2);
+            handleCanvasMouse(e, isRight);
+        }
+
+        function onMouseUp(){ isDrawing = false; }
+        canvas.addEventListener('mousemove', onMouseMove);
+        canvas.addEventListener('mousedown', onMouseDown);
+        canvas.addEventListener('mouseup', onMouseUp);
+        canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // UI binding
+        document.getElementById('btnAstar').onclick = ()=>{ currentAlgorithm="astar"; setActive('btnAstar'); };
+        document.getElementById('btnDijkstra').onclick = ()=>{ currentAlgorithm="dijkstra"; setActive('btnDijkstra'); };
+        document.getElementById('btnBFS').onclick = ()=>{ currentAlgorithm="bfs"; setActive('btnBFS'); };
+        document.getElementById('btnDFS').onclick = ()=>{ currentAlgorithm="dfs"; setActive('btnDFS'); };
+        document.getElementById('startPathBtn').onclick = ()=>{ if(!isAnimating) runAlgorithm(); else stopAnimation(); };
+        document.getElementById('clearWallsBtn').onclick = ()=>{ clearWallsOnly(); };
+        document.getElementById('resetGridBtn').onclick = ()=>{ resetFull(); };
+        document.getElementById('genMazeRecBtn').onclick = ()=>{ generateMazeRecursive(); };
+        document.getElementById('genMazePrimBtn').onclick = ()=>{ generateMazePrim(); };
+        document.getElementById('diagToggle').onchange = (e)=>{ diagonalMove = e.target.checked; };
+        document.getElementById('weightToggle').onchange = (e)=>{ weightedNodesEnabled = e.target.checked; resetFull(); };
+        
+        function setActive(activeId){
+            ['btnAstar','btnDijkstra','btnBFS','btnDFS'].forEach(id=>{
+                let btn = document.getElementById(id);
+                if(id===activeId) btn.classList.add('primary');
+                else btn.classList.remove('primary');
+            });
+        }
+        setActive('btnAstar');
+        grid = initGrid();
+        drawGrid();
+    })();
+</script>
+</body>
+</html>
